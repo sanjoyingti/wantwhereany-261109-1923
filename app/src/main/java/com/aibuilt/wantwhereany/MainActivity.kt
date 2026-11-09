@@ -100,14 +100,14 @@ fun WantWhereAnyApp() {
     }
 
     val pickLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickVisualMedia()
+        ActivityResultContracts.GetContent()
     ) { uri ->
         imageUri = uri
     }
 
     fun requestPermissions() {
         permissionLauncher.launch(
-            listOf(
+            arrayOf(
                 Manifest.permission.CAMERA,
                 Manifest.permission.ACCESS_FINE_LOCATION
             )
@@ -115,11 +115,7 @@ fun WantWhereAnyApp() {
     }
 
     fun pickImage() {
-        pickLauncher.launch(
-            ActivityResultContracts.PickVisualMediaRequest.Builder()
-                .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                .build()
-        )
+        pickLauncher.launch("image/*")
     }
 
     @SuppressLint("MissingPermission")
