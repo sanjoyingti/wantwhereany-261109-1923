@@ -56,28 +56,52 @@ data class PotholeReport(
     val timestamp: Long
 )
 
+// ---------------------------------------------------------------------------
+// WHY THE APP CANNOT FIND OFFICIAL PHONE NUMBERS / DETAILS AUTOMATICALLY
+// ---------------------------------------------------------------------------
+// 1. No reverse geocoding: the app captures latitude/longitude but never converts
+//    those coordinates into a state, district, or constituency. Without knowing
+//    which state the pothole is in, there is no way to pick the correct
+//    contractor, MLA / legislative head, or Chief Minister.
+// 2. No official directory: OfficialsRepository uses hard-coded demo strings and
+//    is not connected to any government API, open dataset, or local database of
+//    elected representatives and road contractors.
+// 3. Missing phone fields: the previous Officials data class stored only email
+//    addresses. Even if the state were known, there was no "official number"
+//    field to display, dial, or message.
+// 4. GPS permission is not a directory lookup: ACCESS_FINE_LOCATION gives the
+//    device location only; it does not provide a registry of public officials.
+//
+// The changes below add nullable phone fields to Officials, keep the e-mail
+// fallback, and show "Not available" in the UI so the limitation is visible
+// instead of silently failing.
+// ---------------------------------------------------------------------------
+
 data class Officials(
     val contractor: String,
+    val contractorPhone: String?,
     val legislativeHead: String,
-    val chiefMinister: String
+    val legislativeHeadPhone: String?,
+    val chiefMinister: String,
+    val chiefMinisterPhone: String?
 )
 
 private object OfficialsRepository {
     fun forState(state: String): Officials = when (state.lowercase()) {
         "maharashtra" -> Officials(
-            "contractor.mh@example.com",
-            "mla.mh@example.com",
-            "cm.mh@example.com"
+            "contractor.mh@example.com", null,
+            "mla.mh@example.com", null,
+            "cm.mh@example.com", null
         )
         "delhi" -> Officials(
-            "contractor.dl@example.com",
-            "mla.dl@example.com",
-            "cm.dl@example.com"
+            "contractor.dl@example.com", null,
+            "mla.dl@example.com", null,
+            "cm.dl@example.com", null
         )
         else -> Officials(
-            "contractor@example.com",
-            "legislative.head@example.com",
-            "chief.minister@example.com"
+            "contractor@example.com", null,
+            "legislative.head@example.com", null,
+            "chief.minister@example.com", null
         )
     }
 }
@@ -309,6 +333,9 @@ fun ConfirmationScreen(
     onSend: () -> Unit,
     onBack: () -> Unit
 ) {
+    // NOTE: State is hard-coded to "maharashtra" because the app has no
+    // reverse-geocoding layer to derive the state from report.latitude /
+    // report.longitude.
     val officials = OfficialsRepository.forState("maharashtra")
 
     Column(
@@ -329,10 +356,41 @@ fun ConfirmationScreen(
             style = MaterialTheme.typography.bodySmall
         )
         Spacer(modifier = Modifier.height(16.dp))
-        Text(text = "Send to:")
-        Text(text = officials.contractor)
-        Text(text = officials.legislativeHead)
-        Text(text = officials.chiefMinister)
+        Text(text = "Send to:", style = MaterialTheme.typography.titleSmall)
+
+        Text(text = "Contractor: ${officials.contractor}")
+        officials.contractorPhone?.let {
+            Text(text = "Phone: $it", style = MaterialTheme.typography.bodySmall)
+        } ?: run {
+            Text(
+                text = "Phone: Not available (no official directory integrated)",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+
+        Text(text = "Legislative Head: ${officials.legislativeHead}")
+        officials.legislativeHeadPhone?.let {
+            Text(text = "Phone: $it", style = MaterialTheme.typography.bodySmall)
+        } ?: run {
+            Text(
+                text = "Phone: Not available (no official directory integrated)",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+
+        Text(text = "Chief Minister: ${officials.chiefMinister}")
+        officials.chiefMinisterPhone?.let {
+            Text(text = "Phone: $it", style = MaterialTheme.typography.bodySmall)
+        } ?: run {
+            Text(
+                text = "Phone: Not available (no official directory integrated)",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(onClick = onSend) {
